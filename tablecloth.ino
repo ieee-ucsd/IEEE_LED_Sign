@@ -1,3 +1,17 @@
+/*
+ * Based off the original IEEE LED Sign created by Alex Forencich.
+ * The modes were created by Alex, and the IEEE LED Sign used 2 potentiometers
+ * and a button. One potentiometer for adjusted the speed, and the other
+ * adjusted for brightness. The button changed through the modes.
+ * The original code was written with a focus on low-level register manipulation.
+ * 
+ * This new version still uses 2 potentiometers and a button for the
+ * same purposes. But it is configured so it can be controlled using
+ * an Android app called "ArduDroid". Due to the nature of switching between
+ * physical and bluetooth by the user, a timer interrupt has been employed to 
+ * allow everything to run smoothly.
+ */
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -240,7 +254,7 @@ void ISR_button() {
   }
 }
 
-void ISR_timer() {
+ISR(TIMER1_COMPA_vect) {
   switch (mode) {
     case 7:
       glow();
