@@ -22,6 +22,7 @@
 #define MODE_WAVE 6
 #define MODE_GLOW 7
 volatile byte mode = MODE_SOLID;
+volatile byte t_mode;
 
 #define F_MIN 0.5   // min freq in Hz
 #define F_MAX 20.0  // max freq in Hz
@@ -69,12 +70,14 @@ void setup() {
   pinMode(button, OUTPUT);
   attachInterrupt(0, ISR_button, RISING);
 
+  cli();
   TCCR1A=0;
   TCCR1B=0;
   OCR1A = 199999; //compare match register to desired timer count
   TCCR1B |= (1 << WGM12); //turn on CTC
   TCCR1B |= (1 << CS10); //set CS12 bit for no prescaler
   TIMSK1 |= (1 <<  OCIE1A); //set interrupt on compare match register
+  sei();
 
 }
 
@@ -109,13 +112,22 @@ void loop() {
   // 3) GET analogWrite DATA FROM ARDUDROID
   if (ard_command == CMD_ANALOGWRITE) {
     if (pin_num == 10) {
-      Serial.println("pin_num, pin_value");
+      //Serial.println("pin_num, pin_value");
       calcbrightPot = pin_value;
     }
     else if (pin_num == 11) {
-      Serial.println("pin_num, pin_value");
+      //Serial.println("pin_num, pin_value");
       calcspeedPot = pin_value;
     }
+    return;  // Done. return to loop();
+  }
+
+  // 4) SEND DATA TO ARDUDROID
+  if (ard_command == CMD_READ_ARDUDROID) { 
+    Serial.print(" Mode: "); 
+    Serial.print(mode);
+    Serial.print(" , Analog 1 = ");
+    Serial.println(analogRead(A1));
     return;  // Done. return to loop();
   }
 }
@@ -231,7 +243,7 @@ void glow() {
   analogWrite(LEDI, (127. * (1. + cos(w))));
   analogWrite(LEDE1, (127. * (1. + cos(w))));
   analogWrite(LEDE2, (127. * (1. + cos(w))));
-  analogWrite(LEDE2, (127. * (1. + cos(w))));
+  analogWrite(LEDE3, (127. * (1. + cos(w))));
   update();
   delay(WAVE_T);
   if (n > (1000. / (wave_freq * WAVE_T))) {
@@ -242,9 +254,10 @@ void glow() {
 volatile int __x;
 volatile int __i;
 void ISR_button() {
-  buttonState = digitalRead(button);
-  if (buttonState == LOW) {
-    mode = (mode + 1) % 2;
+int switchState = digitalRead(4);
+  //if (0) {
+  if (switchState == HIGH) {
+    mode = ((mode - 1) % 6) + 2;
   }
   else {
     
@@ -256,24 +269,26 @@ void ISR_button() {
 
 ISR(TIMER1_COMPA_vect) {
   switch (mode) {
-    case 7:
+    case MODE_GLOW:
       glow();
       break;
-    case 6:
+    case MODE_WAVE:
       wave();
       break;
-    case 5:
+    case MODE_SCROLL:
       scroll();
       break;
-    case 4:
+    case MODE_STROBE:
       strobe();
       break;
-    case 3:
+    case MODE_BLINK:
       blinky();
       break;
-    case 2:
+    case MODE_SOLID:
       solid();
       break;
+    default:
       solid();
+      break;
   }
 }
